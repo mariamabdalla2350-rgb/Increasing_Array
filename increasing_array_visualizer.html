@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Increasing Array — Terracing Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root{
+    --bg:        #1B2430;
+    --bg-grid:   #253242;
+    --base:      #3E5C76;
+    --raised:    #C97C4D;
+    --amber:     #E8A94A;
+    --ink:       #EDEDE3;
+    --ink-dim:   #8FA1B3;
+    --line:      #2A3644;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, var(--bg-grid) 40px);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: 40px 20px 60px;
+  }
+
+  header{
+    text-align:center;
+    max-width: 720px;
+    margin-bottom: 28px;
+  }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size: clamp(28px, 4vw, 42px);
+    letter-spacing:-0.01em;
+    margin: 0 0 6px;
+    color: var(--ink);
+  }
+
+  h1 span{ color: var(--raised); font-style:italic; font-weight:300; }
+
+  .sub{
+    color: var(--ink-dim);
+    font-size:14px;
+    line-height:1.6;
+    margin:0;
+  }
+
+  .panel{
+    width:100%;
+    max-width:900px;
+    background: rgba(37,50,66,0.5);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    margin-bottom: 22px;
+  }
+
+  input[type="text"]{
+    flex: 1 1 260px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family:'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 9px 12px;
+    border-radius: 6px;
+    outline:none;
+  }
+  input[type="text"]:focus{ border-color: var(--amber); }
+
+  button{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: var(--base);
+    color: var(--ink);
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  button:hover{ background:#48688a; }
+  button:active{ transform: translateY(1px); }
+  button.primary{ background: var(--raised); }
+  button.primary:hover{ background:#dd8c5b; }
+  button:disabled{ opacity:0.35; cursor:not-allowed; }
+
+  .speed{
+    display:flex; align-items:center; gap:8px;
+    font-size:11px; color:var(--ink-dim);
+  }
+  input[type="range"]{ accent-color: var(--amber); }
+
+  .stage{
+    position:relative;
+    height: 260px;
+    display:flex;
+    align-items:flex-end;
+    gap: 6px;
+    padding: 0 8px 30px;
+    border-bottom: 2px solid var(--line);
+  }
+
+  .bar-wrap{
+    position:relative;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    height:100%;
+    justify-content:flex-end;
+    min-width: 18px;
+  }
+
+  .delta-label{
+    position:absolute;
+    top:-22px;
+    font-size:11px;
+    color: var(--amber);
+    opacity:0;
+    transform: translateY(4px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    white-space:nowrap;
+  }
+  .delta-label.show{ opacity:1; transform: translateY(0); }
+
+  .bar{
+    width:100%;
+    max-width: 46px;
+    background: var(--base);
+    border-radius: 4px 4px 0 0;
+    position:relative;
+    overflow:hidden;
+    transition: height 0.55s cubic-bezier(.2,.8,.2,1);
+  }
+  .bar .fill{
+    position:absolute;
+    left:0; right:0; bottom:0;
+    background: var(--raised);
+    height:0%;
+    transition: height 0.55s cubic-bezier(.2,.8,.2,1);
+  }
+  .bar.current{ box-shadow: 0 0 0 2px var(--amber); }
+
+  .index-label{
+    margin-top:8px;
+    font-size:11px;
+    color: var(--ink-dim);
+  }
+  .value-label{
+    position:absolute;
+    top:-20px;
+    font-size:11px;
+    color: var(--ink);
+  }
+
+  .readout{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px dashed var(--line);
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .metric{ text-align:left; }
+  .metric .num{
+    font-family:'Fraunces', serif;
+    font-size: 30px;
+    font-weight:600;
+    color: var(--raised);
+    line-height:1;
+  }
+  .metric .label{
+    font-size: 10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color: var(--ink-dim);
+    margin-top:4px;
+  }
+
+  .log{
+    width:100%;
+    max-width:900px;
+    margin-top:18px;
+    font-size:12px;
+    color: var(--ink-dim);
+    min-height: 20px;
+  }
+  .log b{ color: var(--amber); font-weight:500; }
+
+  footer{
+    margin-top: 30px;
+    font-size: 11px;
+    color: var(--ink-dim);
+    opacity:0.7;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .bar, .bar .fill, .delta-label{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Increasing <span>Array</span></h1>
+  <p class="sub">Terracing a jagged array into a non-decreasing slope —<br>
+  one greedy pass, raising every dip up to the height beside it.</p>
+</header>
+
+<div class="panel">
+  <div class="controls">
+    <input id="arrInput" type="text" value="3, 1, 4, 1, 5, 9, 2, 6" spellcheck="false" aria-label="Array values, comma separated">
+    <button id="loadBtn">Load</button>
+    <button id="randomBtn">Randomize</button>
+    <button id="stepBtn" class="primary">Step</button>
+    <button id="playBtn" class="primary">Play</button>
+    <button id="resetBtn">Reset</button>
+    <div class="speed">
+      <label for="speed">speed</label>
+      <input id="speed" type="range" min="150" max="1200" value="550" step="50">
+    </div>
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="readout">
+    <div class="metric">
+      <div class="num" id="moveCount">0</div>
+      <div class="label">Total elevation added</div>
+    </div>
+    <div class="metric">
+      <div class="num" id="stepCount">0 / 0</div>
+      <div class="label">Position in scan</div>
+    </div>
+    <div class="metric">
+      <div class="num" id="statusLabel">Ready</div>
+      <div class="label">Status</div>
+    </div>
+  </div>
+</div>
+
+<div class="log" id="log"></div>
+
+<footer>Greedy left-to-right scan · O(n) time, O(1) extra space</footer>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const moveCountEl = document.getElementById('moveCount');
+  const stepCountEl = document.getElementById('stepCount');
+  const statusEl = document.getElementById('statusLabel');
+  const logEl = document.getElementById('log');
+  const arrInput = document.getElementById('arrInput');
+  const speedInput = document.getElementById('speed');
+
+  let original = [];
+  let arr = [];
+  let i = 1;
+  let totalMoves = 0;
+  let playing = false;
+  let timer = null;
+  let maxVal = 1;
+
+  function parseInput(str){
+    return str.split(',')
+      .map(s => s.trim())
+      .filter(s => s.length)
+      .map(Number)
+      .filter(n => Number.isFinite(n));
+  }
+
+  function heightFor(v){
+    return Math.max(6, (v / maxVal) * 190);
+  }
+
+  function render(){
+    stage.innerHTML = '';
+    maxVal = Math.max(...arr, 1);
+
+    arr.forEach((v, idx) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'bar-wrap';
+
+      const valueLabel = document.createElement('div');
+      valueLabel.className = 'value-label';
+      valueLabel.textContent = v;
+      wrap.appendChild(valueLabel);
+
+      const delta = document.createElement('div');
+      delta.className = 'delta-label';
+      delta.id = 'delta-' + idx;
+      wrap.appendChild(delta);
+
+      const bar = document.createElement('div');
+      bar.className = 'bar' + (idx === i ? ' current' : '');
+      bar.style.height = heightFor(v) + 'px';
+      bar.id = 'bar-' + idx;
+
+      const fill = document.createElement('div');
+      fill.className = 'fill';
+      const raisedAmt = v - original[idx];
+      fill.style.height = (raisedAmt > 0 ? (raisedAmt / v) * 100 : 0) + '%';
+      bar.appendChild(fill);
+
+      wrap.appendChild(bar);
+
+      const idxLabel = document.createElement('div');
+      idxLabel.className = 'index-label';
+      idxLabel.textContent = idx;
+      wrap.appendChild(idxLabel);
+
+      stage.appendChild(wrap);
+    });
+
+    stepCountEl.textContent = `${Math.min(i, arr.length)} / ${arr.length}`;
+    moveCountEl.textContent = totalMoves;
+  }
+
+  function log(msg){
+    logEl.innerHTML = msg;
+  }
+
+  function loadArray(values){
+    if (values.length < 1){ return; }
+    original = values.slice();
+    arr = values.slice();
+    i = 1;
+    totalMoves = 0;
+    stopPlaying();
+    statusEl.textContent = 'Ready';
+    log(`Loaded array of length <b>${arr.length}</b>. Click Step or Play to begin.`);
+    render();
+  }
+
+  function step(){
+    if (i >= arr.length){
+      statusEl.textContent = 'Done';
+      stopPlaying();
+      log(`Finished. Minimum total elevation needed: <b>${totalMoves}</b>.`);
+      return false;
+    }
+
+    const bar = document.getElementById('bar-' + i);
+    if (bar) bar.classList.add('current');
+
+    if (arr[i] < arr[i - 1]){
+      const diff = arr[i - 1] - arr[i];
+      arr[i] = arr[i - 1];
+      totalMoves += diff;
+
+      const deltaEl = document.getElementById('delta-' + i);
+      if (deltaEl){
+        deltaEl.textContent = '+' + diff;
+        deltaEl.classList.add('show');
+      }
+      log(`Index <b>${i}</b> (${original[i]}) was lower than index <b>${i-1}</b> (${arr[i-1]}) — raised by <b>${diff}</b>.`);
+    } else {
+      log(`Index <b>${i}</b> (${arr[i]}) already ≥ index <b>${i-1}</b> (${arr[i-1]}) — no change needed.`);
+    }
+
+    statusEl.textContent = 'Scanning';
+    i++;
+    render();
+    return true;
+  }
+
+  function stopPlaying(){
+    playing = false;
+    clearInterval(timer);
+    document.getElementById('playBtn').textContent = 'Play';
+  }
+
+  document.getElementById('loadBtn').addEventListener('click', () => {
+    const vals = parseInput(arrInput.value);
+    loadArray(vals);
+  });
+
+  document.getElementById('randomBtn').addEventListener('click', () => {
+    const n = 6 + Math.floor(Math.random() * 5);
+    const vals = Array.from({length:n}, () => 1 + Math.floor(Math.random() * 9));
+    arrInput.value = vals.join(', ');
+    loadArray(vals);
+  });
+
+  document.getElementById('stepBtn').addEventListener('click', () => {
+    stopPlaying();
+    step();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    loadArray(original.length ? original : parseInput(arrInput.value));
+  });
+
+  document.getElementById('playBtn').addEventListener('click', () => {
+    if (playing){
+      stopPlaying();
+      return;
+    }
+    playing = true;
+    document.getElementById('playBtn').textContent = 'Pause';
+    timer = setInterval(() => {
+      const cont = step();
+      if (!cont) stopPlaying();
+    }, Number(speedInput.value));
+  });
+
+  // init
+  loadArray(parseInput(arrInput.value));
+})();
+</script>
+
+</body>
+</html>

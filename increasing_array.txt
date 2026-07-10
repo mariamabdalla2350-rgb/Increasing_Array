@@ -1,0 +1,30 @@
+use std::io::{self, Read, Write, BufWriter};
+
+fn main() {
+    // Fast input reading
+    let mut input = String::new();
+    io::stdin().read_to_string(&mut input).unwrap();
+    let stdout = io::stdout();
+    let mut out = BufWriter::new(stdout.lock());
+
+    let mut iter = input.split_ascii_whitespace();
+
+    let n: usize = iter.next().unwrap().parse().unwrap();
+    let mut arr: Vec<i64> = (0..n)
+        .map(|_| iter.next().unwrap().parse().unwrap())
+        .collect();
+
+    let mut moves: i64 = 0;
+
+    // Greedily ensure each element >= previous element.
+    // If arr[i] < arr[i-1], we must increase arr[i] to arr[i-1].
+    // The cost is arr[i-1] - arr[i], and arr[i] becomes arr[i-1].
+    for i in 1..n {
+        if arr[i] < arr[i - 1] {
+            moves += arr[i - 1] - arr[i];
+            arr[i] = arr[i - 1]; // update so next comparison is correct
+        }
+    }
+
+    writeln!(out, "{}", moves).unwrap();
+}
